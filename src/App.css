@@ -1,0 +1,325 @@
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f5f7fb;
+  color: #202938;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.app {
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 230px;
+  background: #172238;
+  color: white;
+  padding: 28px 18px;
+  position: fixed;
+  inset: 0 auto 0 0;
+}
+
+.sidebar h2 {
+  margin: 0 0 40px;
+  font-size: 25px;
+}
+
+.sidebar-label {
+  color: #9aa7bc;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  margin-bottom: 16px;
+}
+
+.nav-item {
+  padding: 13px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  color: #d2d9e5;
+}
+
+.nav-item.active {
+  background: #304564;
+  color: white;
+}
+
+.sidebar-footer {
+  position: absolute;
+  bottom: 25px;
+  font-size: 13px;
+  color: #b6c2d4;
+}
+
+.main-content {
+  margin-left: 230px;
+  padding: 35px;
+}
+
+.topbar,
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.topbar h1 {
+  margin: 0 0 8px;
+  font-size: 28px;
+}
+
+.topbar p,
+.section-header p,
+.stat-card p {
+  color: #748096;
+  font-size: 14px;
+}
+
+.status {
+  color: #257b52;
+  background: #e0f5e9;
+  padding: 9px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  margin: 30px 0;
+}
+
+.stat-card,
+.inventory-section {
+  background: white;
+  border: 1px solid #e8ecf2;
+  border-radius: 12px;
+  padding: 22px;
+}
+
+.stat-card p {
+  margin: 0;
+}
+
+.stat-card h2 {
+  font-size: 25px;
+  margin: 14px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.inventory-section {
+  padding: 25px;
+}
+
+.section-header h2 {
+  margin: 0;
+}
+
+.section-header p {
+  margin-bottom: 0;
+}
+
+.primary-btn,
+.secondary-btn {
+  border: 0;
+  border-radius: 7px;
+  padding: 11px 16px;
+  cursor: pointer;
+}
+
+.primary-btn {
+  background: #315ee8;
+  color: white;
+}
+
+.secondary-btn {
+  background: #edf0f5;
+  color: #283449;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #dce2eb;
+  border-radius: 7px;
+  margin: 25px 0 18px;
+}
+
+.product-form {
+  border: 1px solid #dce2eb;
+  border-radius: 9px;
+  padding: 20px;
+  margin-bottom: 22px;
+}
+
+.product-form h3 {
+  margin-top: 0;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.form-grid input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #dce2eb;
+  border-radius: 6px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: left;
+  white-space: nowrap;
+}
+
+th,
+td {
+  padding: 16px 12px;
+  border-bottom: 1px solid #edf0f4;
+  font-size: 13px;
+}
+
+th {
+  background: #f8f9fc;
+  color: #647087;
+}
+
+.product-name {
+  font-weight: bold;
+}
+
+.stock-badge {
+  display: inline-block;
+  padding: 6px 9px;
+  border-radius: 15px;
+  font-size: 11px;
+}
+
+.stock-badge.healthy {
+  color: #24794f;
+  background: #e1f5e9;
+}
+
+.stock-badge.low {
+  color: #b45309;
+  background: #fff0d8;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 7px;
+}
+
+.edit-btn,
+.delete-btn {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 5px;
+}
+
+.edit-btn {
+  color: #315ee8;
+}
+
+.delete-btn {
+  color: #d33b48;
+}
+
+.empty-state {
+  text-align: center;
+  color: #748096;
+  padding: 30px;
+}
+
+.footer-note {
+  text-align: center;
+  color: #8993a5;
+  font-size: 12px;
+  margin-top: 25px;
+}
+
+@media (max-width: 1100px) {
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .main-content {
+    padding: 24px;
+  }
+}
+
+@media (max-width: 650px) {
+  .sidebar {
+    position: static;
+    width: 100%;
+    padding: 18px;
+  }
+
+  .sidebar h2 {
+    margin-bottom: 18px;
+  }
+
+  .sidebar-label,
+  .sidebar-footer {
+    display: none;
+  }
+
+  .nav-item {
+    display: inline-block;
+    margin: 0 5px 0 0;
+  }
+
+  .main-content {
+    margin-left: 0;
+    padding: 16px;
+  }
+
+  .topbar,
+  .section-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .stats {
+    gap: 10px;
+  }
+
+  .stat-card,
+  .inventory-section {
+    padding: 15px;
+  }
+
+  .stat-card h2 {
+    font-size: 20px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
