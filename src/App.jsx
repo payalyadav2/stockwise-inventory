@@ -3,8 +3,6 @@ import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 import "./App.css";
 
-const API_URL =
-  "https://script.google.com/macros/s/AKfycbymllKfOwsO7fpKjaRiy0I_KQI7AfOD6X8BnMCSNrRDc9jyWm45FMedwlArZUwepJ2lTw/exec";
 
 function App() {
   const [session, setSession] = useState(null);
@@ -20,6 +18,8 @@ function App() {
 
   const [activePage, setActivePage] = useState("Dashboard");
   const [products, setProducts] = useState([]);
+  const [shopId, setShopId] = useState(null);
+  const [userRole, setUserRole] = useState(null);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -99,34 +99,52 @@ function App() {
     fetchProducts();
   }, [session]);
 
-  // Format the Google Sheets response for the interface.
-  function formatProducts(items) {
-    return items.map((item) => ({
-      id: item.id ?? item.ProductID,
-      name: item.name ?? item.ProductName ?? "",
-      category: item.category ?? item.Category ?? "",
-      quantity: Number(item.quantity ?? item.Quantity ?? 0),
-      price: Number(item.price ?? item.Price ?? 0),
-    }));
-  }
-
-  // Read the latest products from Google Sheets.
+  
   async function loadProducts() {
-    const response = await fetch(API_URL);
-
-    if (!response.ok) {
-      throw new Error("Could not connect to Google Sheets.");
+    if (!session?.user?.id) {
+      throw new Error("Please log in again.");
     }
 
-    const result = await response.json();
+    // Find the signed-in user's actual shop membership.
+    const { data: membership, error: membershipError } =
+      await supabase
+        .from("shop_members")
+        .select("shop_id, role")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
 
-    if (!result.success || !Array.isArray(result.products)) {
+    if (membershipError) throw membershipError;
+
+    if (!membership) {
+      setProducts([]);
+      setShopId(null);
+      setUserRole(null);
       throw new Error(
-        result.error || "Unexpected data received from Google Sheets."
+        "No shop membership found for this account."
       );
     }
 
-    setProducts(formatProducts(result.products));
+    setShopId(membership.shop_id);
+    setUserRole(membership.role);
+
+    // Load only products belonging to this shop.
+    const { data, error: productsError } = await supabase
+      .from("products")
+      .select("id, name, category, quantity, price, last_updated")
+      .eq("shop_id", membership.shop_id)
+      .order("name");
+
+    if (productsError) throw productsError;
+
+    setProducts(
+      (data || []).map((item) => ({
+        id: item.id,
+        name: item.name,
+        category: item.category || "",
+        quantity: Number(item.quantity),
+        price: Number(item.price),
+      }))
+    );
   }
 
   // Sign up or log in using Supabase email/password authentication.
@@ -205,76 +223,84 @@ function App() {
     }));
   }
 
-  // Keep the existing Google Sheets write integration.
-  async function sendWriteRequest(payload) {
-    await fetch(API_URL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: {
-        "Content-Type": "text/plain;charset=utf-8",
-      },
-      body: JSON.stringify(payload),
-    });
+  
+async function handleSubmit(event) {
+  event.preventDefault();
+
+  if (saving) return;
+
+  const product = {
+    name: form.name.trim(),
+    category: form.category.trim(),
+    quantity: Number(form.quantity),
+    price: Number(form.price),
+  };
+
+  if (
+    !product.name ||
+    !product.category ||
+    form.quantity === "" ||
+    form.price === "" ||
+    !Number.isFinite(product.quantity) ||
+    !Number.isFinite(product.price) ||
+    !Number.isInteger(product.quantity) ||
+    product.quantity < 0 ||
+    product.price < 0
+  ) {
+    setError("Enter valid product details. Quantity must be a whole number.");
+    return;
   }
 
-  async function handleSubmit(event) {
-    event.preventDefault();
-
-    if (saving) return;
-
-    const product = {
-      name: form.name.trim(),
-      category: form.category.trim(),
-      quantity: Number(form.quantity),
-      price: Number(form.price),
-    };
-
-    if (
-      !product.name ||
-      !product.category ||
-      form.quantity === "" ||
-      form.price === "" ||
-      !Number.isFinite(product.quantity) ||
-      !Number.isFinite(product.price) ||
-      !Number.isInteger(product.quantity) ||
-      product.quantity < 0 ||
-      product.price < 0
-    ) {
-      setError("Enter valid product details. Quantity must be a whole number.");
-      return;
-    }
-
-    const isEditing = editingId !== null;
-
-    try {
-      setSaving(true);
-      setError("");
-      setMessage("");
-
-      await sendWriteRequest({
-        action: isEditing ? "update" : "create",
-        product: isEditing
-          ? { ...product, id: editingId }
-          : product,
-      });
-
-      await loadProducts();
-      resetForm();
-
-      setMessage(
-        isEditing
-          ? "Update request sent. Check Google Sheets to confirm the change."
-          : "Add request sent. Check Google Sheets to confirm the new row."
-      );
-    } catch (err) {
-      console.error("Error saving product:", err);
-      setError(
-        "Could not verify the save. Check Google Sheets before trying again."
-      );
-    } finally {
-      setSaving(false);
-    }
+  if (!shopId) {
+    setError("Your shop is not linked to this account. Please log in again.");
+    return;
   }
+
+  try {
+    setSaving(true);
+    setError("");
+    setMessage("");
+
+    if (editingId !== null) {
+      const { error: updateError } = await supabase
+        .from("products")
+        .update({
+          name: product.name,
+          category: product.category,
+          quantity: product.quantity,
+          price: product.price,
+        })
+        .eq("id", editingId)
+        .eq("shop_id", shopId);
+
+      if (updateError) throw updateError;
+
+      setMessage("Product updated successfully.");
+    } else {
+      const { error: insertError } = await supabase
+        .from("products")
+        .insert({
+          ...product,
+          shop_id: shopId,
+        });
+
+      if (insertError) throw insertError;
+
+      setMessage("Product added successfully.");
+    }
+
+    await loadProducts();
+    resetForm();
+  } catch (err) {
+    console.error("Error saving product:", err);
+    setError(err.message || "Could not save the product.");
+  } finally {
+    setSaving(false);
+  }
+}
+
+
+
 
   function resetForm() {
     setForm({
@@ -316,37 +342,42 @@ function App() {
     setShowForm(true);
   }
 
-  async function handleDelete(id) {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this product?"
-    );
+  
+async function handleDelete(id) {
+  const confirmed = window.confirm(
+    "Are you sure you want to delete this product?"
+  );
 
-    if (!confirmed || saving) return;
+  if (!confirmed || saving) return;
 
-    try {
-      setSaving(true);
-      setError("");
-      setMessage("");
-
-      await sendWriteRequest({
-        action: "delete",
-        id,
-      });
-
-      await loadProducts();
-
-      setMessage(
-        "Delete request sent. Check Google Sheets to confirm the deletion."
-      );
-    } catch (err) {
-      console.error("Error deleting product:", err);
-      setError(
-        "Could not verify the deletion. Check Google Sheets before trying again."
-      );
-    } finally {
-      setSaving(false);
-    }
+  if (!shopId) {
+    setError("Your shop is not linked to this account.");
+    return;
   }
+
+  try {
+    setSaving(true);
+    setError("");
+    setMessage("");
+
+    const { error: deleteError } = await supabase
+      .from("products")
+      .delete()
+      .eq("id", id)
+      .eq("shop_id", shopId);
+
+    if (deleteError) throw deleteError;
+
+    await loadProducts();
+    setMessage("Product deleted successfully.");
+  } catch (err) {
+    console.error("Error deleting product:", err);
+    setError(err.message || "Could not delete the product.");
+  } finally {
+    setSaving(false);
+  }
+}
+
 
   function saveStockLimit(event) {
     event.preventDefault();
@@ -570,7 +601,7 @@ function App() {
         : "Manage your StockWise preferences and account."}
   </p>
 </div>
-          <span className="status">● Google Sheets</span>
+          <span className="status">● Supabase Connected</span>
         </header>
 
         {error && <p role="alert" className="app-error">{error}</p>}
@@ -617,7 +648,7 @@ function App() {
               </div>
 
               {loading ? (
-                <p>Loading products from Google Sheets...</p>
+                <p>Loading products from Google Supabase...</p>
               ) : lowStockProducts.length === 0 ? (
                 <p>There are no low-stock products right now.</p>
               ) : (
